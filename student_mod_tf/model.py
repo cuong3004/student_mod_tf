@@ -16,7 +16,7 @@ from keras_cv_attention_models.attention_layers import (
     add_pre_post_process,
 )
 from keras_cv_attention_models.download_and_load import reload_model_weights
-from tfm.vision.layers import SqueezeExcitation
+from tensorflow_models.vision.layers import SqueezeExcitation
 
 LAYER_NORM_EPSILON = 1e-5
 PRETRAINED_DICT = {
