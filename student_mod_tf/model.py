@@ -678,16 +678,16 @@ class SqueezeExcitation(tf.keras.layers.Layer):
     # self._kernel_initializer = kernel_initializer
     # self._kernel_regularizer = kernel_regularizer
     # self._bias_regularizer = bias_regularizer
-    # if tf.keras.backend.image_data_format() == 'channels_last':
-    #   if not use_3d_input:
-    #     self._spatial_axis = [1, 2]
-    #   else:
-    #     self._spatial_axis = [1, 2, 3]
-    # else:
-    #   if not use_3d_input:
-    #     self._spatial_axis = [2, 3]
-    #   else:
-    #     self._spatial_axis = [2, 3, 4]
+    if tf.keras.backend.image_data_format() == 'channels_last':
+      if not use_3d_input:
+        self._spatial_axis = [1, 2]
+      else:
+        self._spatial_axis = [1, 2, 3]
+    else:
+      if not use_3d_input:
+        self._spatial_axis = [2, 3]
+      else:
+        self._spatial_axis = [2, 3, 4]
     # self._activation_fn = tf_utils.get_activation(activation)
     # self._gating_activation_fn = tf_utils.get_activation(gating_activation)
 
