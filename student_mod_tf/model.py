@@ -625,7 +625,124 @@ from keras_cv_attention_models.attention_layers import (
     add_pre_post_process,
 )
 from keras_cv_attention_models.download_and_load import reload_model_weights
-import tensorflow_models as tfm
+# import tensorflow_models as tfm
+
+class SqueezeExcitation(tf.keras.layers.Layer):
+  """Creates a squeeze and excitation layer."""
+
+  def __init__(self,
+               in_filters,
+               out_filters,
+               se_ratio,
+               # divisible_by=1,
+               # use_3d_input=False,
+               # kernel_initializer='VarianceScaling',
+               # kernel_regularizer=None,
+               # bias_regularizer=None,
+               # activation='relu',
+               # gating_activation='sigmoid',
+               # round_down_protect=True,
+               **kwargs):
+    """Initializes a squeeze and excitation layer.
+    Args:
+      in_filters: An `int` number of filters of the input tensor.
+      out_filters: An `int` number of filters of the output tensor.
+      se_ratio: A `float` or None. If not None, se ratio for the squeeze and
+        excitation layer.
+      divisible_by: An `int` that ensures all inner dimensions are divisible by
+        this number.
+      use_3d_input: A `bool` of whether input is 2D or 3D image.
+      kernel_initializer: A `str` of kernel_initializer for convolutional
+        layers.
+      kernel_regularizer: A `tf.keras.regularizers.Regularizer` object for
+        Conv2D. Default to None.
+      bias_regularizer: A `tf.keras.regularizers.Regularizer` object for Conv2d.
+        Default to None.
+      activation: A `str` name of the activation function.
+      gating_activation: A `str` name of the activation function for final
+        gating function.
+      round_down_protect: A `bool` of whether round down more than 10% will be
+        allowed.
+      **kwargs: Additional keyword arguments to be passed.
+    """
+    super(SqueezeExcitation, self).__init__(**kwargs)
+
+    self._in_filters = in_filters
+    self._out_filters = out_filters
+    self._se_ratio = se_ratio
+    # self._divisible_by = divisible_by
+    # self._round_down_protect = round_down_protect
+    # self._use_3d_input = use_3d_input
+    # self._activation = activation
+    # self._gating_activation = gating_activation
+    # self._kernel_initializer = kernel_initializer
+    # self._kernel_regularizer = kernel_regularizer
+    # self._bias_regularizer = bias_regularizer
+    # if tf.keras.backend.image_data_format() == 'channels_last':
+    #   if not use_3d_input:
+    #     self._spatial_axis = [1, 2]
+    #   else:
+    #     self._spatial_axis = [1, 2, 3]
+    # else:
+    #   if not use_3d_input:
+    #     self._spatial_axis = [2, 3]
+    #   else:
+    #     self._spatial_axis = [2, 3, 4]
+    # self._activation_fn = tf_utils.get_activation(activation)
+    # self._gating_activation_fn = tf_utils.get_activation(gating_activation)
+
+  def build(self, input_shape):
+    num_reduced_filters = make_divisible(
+        max(1, int(self._in_filters * self._se_ratio)),
+        divisor=self._divisible_by,
+        round_down_protect=self._round_down_protect)
+
+    self._se_reduce = tf.keras.layers.Conv2D(
+        filters=num_reduced_filters,
+        kernel_size=1,
+        strides=1,
+        padding='same',
+        use_bias=True,
+        # kernel_initializer=tf_utils.clone_initializer(self._kernel_initializer),
+        # kernel_regularizer=self._kernel_regularizer,
+        # bias_regularizer=self._bias_regularizer
+        )
+
+    self._se_expand = tf.keras.layers.Conv2D(
+        filters=self._out_filters,
+        kernel_size=1,
+        strides=1,
+        padding='same',
+        use_bias=True,
+        # kernel_initializer=tf_utils.clone_initializer(self._kernel_initializer),
+        # kernel_regularizer=self._kernel_regularizer,
+        # bias_regularizer=self._bias_regularizer
+        )
+
+    super(SqueezeExcitation, self).build(input_shape)
+
+  def get_config(self):
+    config = {
+        'in_filters': self._in_filters,
+        'out_filters': self._out_filters,
+        'se_ratio': self._se_ratio,
+        # 'divisible_by': self._divisible_by,
+        # 'use_3d_input': self._use_3d_input,
+        # 'kernel_initializer': self._kernel_initializer,
+        # 'kernel_regularizer': self._kernel_regularizer,
+        # 'bias_regularizer': self._bias_regularizer,
+        # 'activation': self._activation,
+        # 'gating_activation': self._gating_activation,
+        # 'round_down_protect': self._round_down_protect,
+    }
+    base_config = super(SqueezeExcitation, self).get_config()
+    return dict(list(base_config.items()) + list(config.items()))
+
+  def call(self, inputs):
+    x = tf.reduce_mean(inputs, self._spatial_axis, keepdims=True)
+    x = tf.nn.swish(self._se_reduce(x))
+    x = tf.nn.sigmoid(self._se_expand(x))
+    return x * inputs
 
 LAYER_NORM_EPSILON = 1e-5
 PRETRAINED_DICT = {
@@ -844,7 +961,7 @@ def MobileViT(
                     patch_height = -1 if patches_to_batch else int(tf.math.ceil(nn.shape[1] / patch_size))
                     nn = transformer_pre_process(nn, attn_channel, patch_size, resize_first, use_depthwise, patches_to_batch, activation=activation, name=name)
                 nn = mhsa_mlp_block(nn, attn_channel, layer_scale=layer_scale, **mhsa_mlp_block_common_kwargs, name=name)
-                nn = tfm.vision.layers.SqueezeExcitation(attn_channel, attn_channel, 0.25)(nn)
+                nn = SqueezeExcitation(attn_channel, attn_channel, 0.25)(nn)
                 if block_id == num_block - 1:  # post
                     nn = group_norm(nn, groups=num_norm_groups, name=name + "post_") if num_norm_groups > 0 else layer_norm(nn, name=name + "post_")
                     nn = transformer_post_process(nn, pre_attn, out_channel, patch_size, patch_height, activation=post_activation, name=name)
