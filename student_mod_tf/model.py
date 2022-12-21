@@ -692,10 +692,11 @@ class SqueezeExcitation(tf.keras.layers.Layer):
     # self._gating_activation_fn = tf_utils.get_activation(gating_activation)
 
   def build(self, input_shape):
-    num_reduced_filters = make_divisible(
-        max(1, int(self._in_filters * self._se_ratio)),
-        divisor=self._divisible_by,
-        round_down_protect=self._round_down_protect)
+    num_reduced_filters = max(1, int(self._in_filters * self._se_ratio))
+    # num_reduced_filters = make_divisible(
+    #     max(1, int(self._in_filters * self._se_ratio)),
+    #     divisor=self._divisible_by,
+    #     round_down_protect=self._round_down_protect)
 
     self._se_reduce = tf.keras.layers.Conv2D(
         filters=num_reduced_filters,
