@@ -3,4 +3,4 @@ gdown
 wandb>=0.13.7
 natsort
 tensorflow_datasets
-tf-models-official
+tf-models-official==2.9.2
